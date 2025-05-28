@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-
 void main() {
   runApp(const PoseApp());
 }
@@ -48,7 +47,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     if (index == 1) {
-      // More apps page
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const MoreAppsPage()),
@@ -114,34 +112,47 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-
-// Home tab with 4 sample poses from assets
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Only show 4 sample poses on Home page
     List<String> images = List.generate(30, (index) => 'assets/images/pose${index + 1}.jpeg');
 
     return Column(
       children: [
         const Padding(
           padding: EdgeInsets.all(16.0),
-          child: Text(
-            'Welcome to the Photo Pose Gallery',
-            style: TextStyle(fontSize: 20),
-          ),
+          child: Text('Welcome to the Photo Pose Gallery', style: TextStyle(fontSize: 20)),
         ),
         Expanded(
           child: GridView.builder(
             itemCount: images.length,
             padding: const EdgeInsets.all(10),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10),
-            itemBuilder: (context, index) => ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.asset(images[index], fit: BoxFit.cover),
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemBuilder: (context, index) => GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FullImagePage(imagePath: images[index], isAsset: true),
+                  ),
+                );
+              },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.asset(
+                  images[index],
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Center(
+                    child: Icon(Icons.image_not_supported, size: 50),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -150,8 +161,6 @@ class HomePage extends StatelessWidget {
   }
 }
 
-
-// Category pages with 12 sample images
 class CategoryPage extends StatelessWidget {
   final String category;
   const CategoryPage({super.key, required this.category});
@@ -169,21 +178,77 @@ class CategoryPage extends StatelessWidget {
         itemCount: images.length,
         padding: const EdgeInsets.all(10),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10),
-        itemBuilder: (context, index) => Image.network(images[index], fit: BoxFit.cover),
+          crossAxisCount: 2,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+        ),
+        itemBuilder: (context, index) => GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => FullImagePage(imagePath: images[index], isAsset: false),
+              ),
+            );
+          },
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.network(
+              images[index],
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return const Center(child: CircularProgressIndicator());
+              },
+              errorBuilder: (context, error, stackTrace) => const Center(
+                child: Icon(Icons.image_not_supported, size: 50),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-// More Apps page with developer info and sample links
+class FullImagePage extends StatelessWidget {
+  final String imagePath;
+  final bool isAsset;
+
+  const FullImagePage({super.key, required this.imagePath, required this.isAsset});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(backgroundColor: Colors.black),
+      body: Center(
+        child: InteractiveViewer(
+          child: isAsset
+              ? Image.asset(imagePath, fit: BoxFit.contain)
+              : Image.network(imagePath, fit: BoxFit.contain),
+        ),
+      ),
+    );
+  }
+}
+
 class MoreAppsPage extends StatelessWidget {
   const MoreAppsPage({super.key});
 
-  final List<Map<String, String>> apps = const [
-    {'name': 'Prayer Time App', 'link': 'https://play.google.com/store/apps/details?id=prayer.app'},
-    {'name': 'Quran Study', 'link': 'https://play.google.com/store/apps/details?id=quran.app'},
-    {'name': 'Tandela Weather', 'link': 'https://play.google.com/store/apps/details?id=weather.tandela'},
+  static const List<Map<String, String>> apps = [
+    {
+      'name': 'Prayer Time App',
+      'link': 'https://play.google.com/store/apps/details?id=prayer.app'
+    },
+    {
+      'name': 'Quran Study',
+      'link': 'https://play.google.com/store/apps/details?id=quran.app'
+    },
+    {
+      'name': 'Tandela Weather',
+      'link': 'https://play.google.com/store/apps/details?id=weather.tandela'
+    },
   ];
 
   @override
@@ -195,7 +260,11 @@ class MoreAppsPage extends StatelessWidget {
         children: [
           Image.asset('assets/dev.jpg', height: 120),
           const SizedBox(height: 10),
-          const Text('Developed by Tandelabintricky', style: TextStyle(fontSize: 18)),
+          const Text(
+            'Developed by Tandelabintricky',
+            style: TextStyle(fontSize: 18),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 20),
           ...apps.map((app) {
             return ListTile(
@@ -204,7 +273,11 @@ class MoreAppsPage extends StatelessWidget {
               onTap: () async {
                 final url = Uri.parse(app['link']!);
                 if (await canLaunchUrl(url)) {
-                  await launchUrl(url);
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Could not open ${app['name']}')),
+                  );
                 }
               },
             );
